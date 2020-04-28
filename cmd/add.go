@@ -17,8 +17,9 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
+	"log"
 
+	"github.com/boltdb/bolt"
 	"github.com/spf13/cobra"
 )
 
@@ -32,20 +33,42 @@ var addCmd = &cobra.Command{
 	the above command would add "write shopping list" and "call mum" to your TODO list`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("added TODO:", strings.Join(args, ","))
+		err := addTodo(args)
+		if err != nil {
+			log.Fatalln("[Fail to add todo]", err)
+		} else {
+			fmt.Println("added successfully")
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(addCmd)
+}
 
-	// Here you will define your flags and configuration settings.
+func addTodo(todos []string) error {
+	taskDB.db, taskDB.err = bolt.Open(taskDB.name, taskDB.port, nil)
+	checkErr(taskDB.err, "[Fail to connect to DB]")
+	defer taskDB.db.Close()
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// addCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// addCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	if err := taskDB.db.Update(func(tx *bolt.Tx) error {
+		// Create a bucket.
+		b, err := tx.CreateBucketIfNotExists([]byte("todos"))
+		if err != nil {
+			return err
+		}
+	
+		// Set the value "v" for the key "i".
+		for i, v := range todos {
+			// @todo get total entry amount from DB
+			if err := b.Put([]byte(fmt.Sprint(i+1)), []byte(v)); err != nil {
+				return err
+			}
+		}
+		// b.Tx().Commit()
+		return nil
+	}); err != nil {
+		return err
+	}
+	return nil
 }

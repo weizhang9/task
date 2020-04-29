@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/boltdb/bolt"
 	"github.com/spf13/cobra"
@@ -57,15 +58,20 @@ func addTodo(todos []string) error {
 		if err != nil {
 			return err
 		}
-	
-		// Set the value "v" for the key "i".
-		for i, v := range todos {
-			// @todo get total entry amount from DB
-			if err := b.Put([]byte(fmt.Sprint(i+1)), []byte(v)); err != nil {
-				return err
+
+		for _, v := range todos {
+			lastk, _ := b.Cursor().Last()
+			if lastk != nil {
+				lastkInt, _ := strconv.Atoi(string(lastk))
+				if err := b.Put([]byte(fmt.Sprint(lastkInt+1)), []byte(v)); err != nil {
+					return err
+				}
+			} else {
+				if err := b.Put([]byte(fmt.Sprint("1")), []byte(v)); err != nil {
+					return err
+				}
 			}
 		}
-		// b.Tx().Commit()
 		return nil
 	}); err != nil {
 		return err

@@ -27,8 +27,8 @@ import (
 type database struct {
 	name string
 	port os.FileMode
-	db *bolt.DB
-	err error
+	db   *bolt.DB
+	err  error
 }
 
 var taskDB = database{

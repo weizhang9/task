@@ -34,11 +34,12 @@ var addCmd = &cobra.Command{
 	the above command would add "write shopping list" and "call mum" to your TODO list`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		err := addTodo(args)
-		if err != nil {
-			log.Fatalln("[Fail to add todo]", err)
-		} else {
-			fmt.Println("added successfully")
+		for _, v := range args {
+			if err := addTodo(v); err != nil {
+				log.Fatalf("Cannot add TODO [%s]: %s", v, err)
+			} else {
+				fmt.Println("Added TODO:", v)
+			}
 		}
 	},
 }
@@ -47,9 +48,8 @@ func init() {
 	rootCmd.AddCommand(addCmd)
 }
 
-func addTodo(todos []string) error {
-	taskDB.db, taskDB.err = bolt.Open(taskDB.name, taskDB.port, nil)
-	checkErr(taskDB.err, "[Fail to connect to DB]")
+func addTodo(todo string) error {
+	connectDB()
 	defer taskDB.db.Close()
 
 	if err := taskDB.db.Update(func(tx *bolt.Tx) error {
@@ -59,19 +59,21 @@ func addTodo(todos []string) error {
 			return err
 		}
 
-		for _, v := range todos {
-			lastk, _ := b.Cursor().Last()
-			if lastk != nil {
-				lastkInt, _ := strconv.Atoi(string(lastk))
-				if err := b.Put([]byte(fmt.Sprint(lastkInt+1)), []byte(v)); err != nil {
-					return err
-				}
-			} else {
-				if err := b.Put([]byte(fmt.Sprint("1")), []byte(v)); err != nil {
-					return err
-				}
+		// check if any item exists in db
+		lastk, _ := b.Cursor().Last()
+		if lastk != nil {
+			// apend the item after last item
+			lastkInt, _ := strconv.Atoi(string(lastk))
+			if err := b.Put([]byte(fmt.Sprint(lastkInt+1)), []byte(todo)); err != nil {
+				return err
+			}
+		} else {
+			// if empty db, add the first item
+			if err := b.Put([]byte(fmt.Sprint("1")), []byte(todo)); err != nil {
+				return err
 			}
 		}
+		
 		return nil
 	}); err != nil {
 		return err

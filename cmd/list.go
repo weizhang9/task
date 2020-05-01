@@ -27,10 +27,13 @@ func init() {
 }
 
 func listTodo() error {
-	taskDB.db, taskDB.err = bolt.Open(taskDB.name, taskDB.port, nil)
-	checkErr(taskDB.err, "[Fail to connect to DB]")
+	connectDB()
 	defer taskDB.db.Close()
 
+	return list()
+}
+
+func list() error {
 	if err := taskDB.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("todos"))
 		b.ForEach(func(k, v []byte) error {

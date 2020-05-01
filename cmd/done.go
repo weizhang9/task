@@ -17,8 +17,9 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
+	"log"
 
+	"github.com/boltdb/bolt"
 	"github.com/spf13/cobra"
 )
 
@@ -36,20 +37,49 @@ var doneCmd = &cobra.Command{
 	which will mark TODO 1 and 2 as complete and remove it from the list`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Completed TODO:", strings.Join(args, ","))
+		for _, v := range args {
+			if err := doneTodo(v); err != nil {
+				log.Fatalf("TODO [%s] doesn't exist", v)
+			} else {
+				fmt.Println("Completed TODO:", v)
+			}
+		}
+		
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(doneCmd)
+}
 
-	// Here you will define your flags and configuration settings.
+func doneTodo(todo string)  error {
+	connectDB()
+	defer taskDB.db.Close()
+	return done(todo)
+}
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// doneCmd.PersistentFlags().String("foo", "", "A help for foo")
+func done(todo string) error {
+	if err := taskDB.db.View(func(tx *bolt.Tx) error {
+		v := tx.Bucket([]byte("todos")).Get([]byte(todo))
+		// check if key exist
+		if v == nil {
+			return fmt.Errorf("TODO [%s] doesn't exist", todo)
+		}
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// doneCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+		// if exists, delete it
+		return remove(todo)
+	}); err != nil {
+		return err
+	}
+	
+	return nil
+}
+
+func remove(todo string) error {
+	if err := taskDB.db.Update(func(tx *bolt.Tx) error {
+		return tx.Bucket([]byte("todos")).Delete([]byte(todo))
+	}); err != nil {
+		return err
+	}
+	return nil
 }

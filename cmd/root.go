@@ -63,3 +63,8 @@ func checkErr(e error, info string) {
 		log.Fatalln(info, e)
 	}
 }
+
+func connectDB() {
+	taskDB.db, taskDB.err = bolt.Open(taskDB.name, taskDB.port, nil)
+	checkErr(taskDB.err, "[Fail to connect to DB]")
+}

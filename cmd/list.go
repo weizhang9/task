@@ -2,47 +2,36 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
-	"github.com/boltdb/bolt"
+	"gophercises/task/db"
+
 	"github.com/spf13/cobra"
 )
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all the incomplete TODOs",
-	Long: `list command allows you to list out all the incomplete TODOs, it doesn't accept any arg. For example:
-
-	$ task list
-and the result would look like:
-	1. wash dishes
-	2. take bins out`,
+	Short: "List all your task(s)",
 	Run: func(cmd *cobra.Command, args []string) {
-		checkErr(listTodo(), "Fail to list todos")
+		tasks, err := db.AllTasks()
+		if err != nil {
+			fmt.Println("Failed to list todos 😭", err)
+			os.Exit(1)
+		}
+		
+		if len(tasks) == 0 {
+			fmt.Println("You have no tasks 🥳")
+			return
+		}
+
+		fmt.Println("You have the 👇 tasks 🙈:")
+		for i, t := range tasks {
+			fmt.Println(i+1, t.Value)
+		}
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(listCmd)
-}
-
-func listTodo() error {
-	connectDB()
-	defer taskDB.db.Close()
-
-	return list()
-}
-
-func list() error {
-	if err := taskDB.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("todos"))
-		b.ForEach(func(k, v []byte) error {
-			fmt.Printf("TODO [%s]: %s\n", string(k), string(v))
-			return nil
-		})
-		return nil
-	}); err != nil {
-		return err
-	}
-	return nil
+	RootCmd.AddCommand(listCmd)
 }

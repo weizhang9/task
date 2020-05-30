@@ -20,5 +20,6 @@ Available Commands:
   list        List all your task(s)
 
 Flags:
+  -a, --all    Marks all task(s) as done
   -h, --help   help for task
 ```

@@ -68,6 +68,18 @@ func DeleteTask(key int) error {
 	})
 }
 
+func DeleteAllTasks(tasks []Task) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		for _, t := range tasks {
+			err := tx.Bucket(taskBucket).Delete(itob(uint64(t.Key)))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func itob(v uint64) []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, v)
